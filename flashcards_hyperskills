@@ -197,10 +197,6 @@ class Flashcard:
         print('Card statistics have been reset.')
         to_log('Card statistics have been reset.')
 
-    def show(self):
-        with open('zalupka.txt', 'w') as ff:
-            ff.write(logger.getvalue())
-
     def log(self):
         print('File name:')
         to_log('File name:')
