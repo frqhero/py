@@ -1,0 +1,255 @@
+import random
+from io import StringIO
+import argparse
+
+
+def check_term(offered_term):
+    for card in myinst.mass:
+        term, definition, attempts = card.split(':')
+        if term == offered_term:
+            print(f'The card "{offered_term}" already exists. Try again:')
+            to_log(f'The card "{offered_term}" already exists. Try again:')
+            return True
+    return False
+
+
+def check_definition(offered_definition):
+    for card in myinst.mass:
+        term, definition, attempts = card.split(':')
+        if definition == offered_definition:
+            print(f'The definition "{offered_definition}" already exists. Try again:')
+            to_log(f'The definition "{offered_definition}" already exists. Try again:')
+            return True
+    return False
+
+
+def further_processing(users_respond, question):
+    correct_answer = question.split(':')[1]
+    if users_respond == correct_answer:
+        print('Correct!')
+        to_log('Correct!')
+        return
+    increment_wrong_answers_quantity(question)
+    find_out_if_it_fits_something_else_or_wrong(users_respond, correct_answer)
+
+
+def find_out_if_it_fits_something_else_or_wrong(users_respond, correct_answer):
+    for x in myinst.mass:
+        term, definition, attempts = x.split(':')
+        if users_respond == definition:
+            print(f'Wrong. The right answer is "{correct_answer}", ' \
+                  f'but your definition is correct for "{term}".')
+            to_log(f'Wrong. The right answer is "{correct_answer}", ' \
+                  f'but your definition is correct for "{term}".')
+            return
+    print(f'Wrong. The right answer is "{correct_answer}".')
+    to_log(f'Wrong. The right answer is "{correct_answer}".')
+
+
+def increment_wrong_answers_quantity(object_to_increment):
+    term, definition, attempts = object_to_increment.split(':')
+    myinst.mass.remove(object_to_increment)
+    attempts = str(int(attempts) + 1)
+    myinst.mass.append(f'{term}:{definition}:{attempts}')
+
+
+def to_log(received_str):
+    print(received_str, file=logger)
+
+def show_result(biggest):
+    res = []
+    for card in myinst.mass:
+        term, definition, attempts = card.split(':')
+        if int(attempts) == biggest:
+            res.append(card)
+    if len(res) == 1:
+        process_single(res)
+    else:
+        process_multi(res)
+
+def process_single(res):
+    term, definition, attempts = res[0].split(':')
+    print(f'The hardest card is "{term}". You have {attempts} errors answering it')
+
+def process_multi(res):
+    beginning_of_the_string = 'The hardest cards are '
+    for elemento in res:
+        term, definition, attempts = elemento.split(':')
+        beginning_of_the_string += f'"{term}", '
+    beginning_of_the_string = beginning_of_the_string[:len(beginning_of_the_string)-2]
+    print(beginning_of_the_string)
+
+
+
+
+class Flashcard:
+    def __init__(self):
+        self.mass = []
+        self.input_export = ''
+
+    def show_introduction(self):
+        introduction = "Input the action (add, remove, import, export, ask, exit, log, hardest card, reset stats):"
+        print(introduction)
+        to_log(introduction)
+        action = input()
+        to_log(action)
+        action = action.replace(' ', '')
+        if action == 'import':
+            self.import_cards()
+        else:
+            getattr(self, action)()
+
+    def add(self):
+        appeal = 'The card:'
+        print(appeal)
+        to_log(appeal)
+        keep_going = True
+        while keep_going:
+            term = input()
+            to_log(term)
+            keep_going = check_term(term)
+        print('The definition of the card:')
+        to_log('The definition of the card:')
+        keep_going = True
+        while keep_going:
+            definition = input()
+            to_log(definition)
+            keep_going = check_definition(definition)
+        self.mass.append(f'{term}:{definition}:0')
+        print(f'The pair ("{term}":"{definition}") has been added.')
+        to_log(f'The pair ("{term}":"{definition}") has been added.')
+
+    def remove(self):
+        print('Which card?')
+        to_log('Which card?')
+        offered_term = input()
+        to_log(offered_term)
+        for card in self.mass:
+            term, definition, attempts = card.split(':')
+            if term == offered_term:
+                self.mass.remove(card)
+                print('The card has been removed.')
+                to_log('The card has been removed.')
+                return
+        print(f'Can\'t remove "{offered_term}": there is no such card.')
+        to_log(f'Can\'t remove "{offered_term}": there is no such card.')
+
+    def import_cards(self):
+        print('File name:')
+        to_log('File name:')
+        user_filename = input()
+        to_log(user_filename)
+        try:
+            with open(user_filename) as file:
+                content = file.read().splitlines()
+                for inner_card in self.mass:
+                    if inner_card in content:
+                        self.mass.remove(inner_card)
+                self.mass += content
+                print(len(content), 'cards have been loaded.')
+                to_log(str(len(content)) + ' cards have been loaded.')
+        except:
+            print('File not found')
+            to_log('File not found')
+
+    def export(self):
+        print('File name:')
+        to_log('File name:')
+        user_filename = input()
+        to_log(user_filename)
+        with open(user_filename, 'w') as file:
+            for x in self.mass:
+                print(x, file=file)
+            print(len(self.mass), 'cards have been saved.')
+            to_log(str(len(self.mass)) + ' cards have been saved.')
+
+    def ask(self):
+        print('How many times to ask?')
+        to_log('How many times to ask?')
+        user_number = int(input())
+        to_log(user_number)
+        for _ in range(user_number):
+            question = random.choice(self.mass)
+            print('Print the definition of "{}":'.format(question.split(':')[0]))
+            to_log('Print the definition of "{}":'.format(question.split(':')[0]))
+            users_respond = input()
+            to_log(users_respond)
+            further_processing(users_respond, question)
+
+    def exit(self):
+        print('Bye bye!')
+        to_log('Bye bye!')
+        if self.input_export != '':
+            with open(self.input_export, 'w') as file:
+                for x in self.mass:
+                    print(x, file=file)
+                amount = len(self.mass)
+                print(f'{amount} cards have been saved.')
+                to_log(f'{amount} cards have been saved.')
+        quit()
+
+    def resetstats(self):
+        newmass = []
+        for each in self.mass:
+            term, definition, attempts = each.split(':')
+            newmass.append(f'{term}:{definition}:0')
+        self.mass = newmass
+        print('Card statistics have been reset.')
+        to_log('Card statistics have been reset.')
+
+    def show(self):
+        with open('zalupka.txt', 'w') as ff:
+            ff.write(logger.getvalue())
+
+    def log(self):
+        print('File name:')
+        to_log('File name:')
+        filename_respond = input()
+        to_log(filename_respond)
+        with open(filename_respond, 'w') as ff:
+            ff.write(logger.getvalue())
+        print('The log has been saved.')
+        to_log('The log has been saved.')
+
+    def hardestcard(self):
+        biggest = 0
+        for card in myinst.mass:
+            term, definition, attempts = card.split(':')
+            if int(attempts) > biggest:
+                biggest = int(attempts)
+        if biggest == 0:
+            print('There are no cards with errors.')
+        else:
+            show_result(biggest)
+
+    def check_whether_arguments_have_been_passed(self):
+        if args.import_from != None:
+            import_from = args.import_from
+            with open(import_from) as file:
+                content = file.read().splitlines()
+            for external_card in content:
+                self.mass.append(external_card)
+            amount = len(self.mass)
+            print(f'{amount} cards have been loaded.')
+            to_log(f'{amount} cards have been loaded.')
+        if args.export_to != None:
+            self.input_export = args.export_to
+
+
+if __name__ == '__main__':
+
+    myinst = Flashcard()
+    logger = StringIO()
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--import_from')
+    parser.add_argument('--export_to')
+
+    args = parser.parse_args()
+
+    myinst.check_whether_arguments_have_been_passed()
+
+
+    while True:
+        myinst.show_introduction()
+
